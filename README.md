@@ -1,5 +1,5 @@
 # Tkinter UI
-A simple standalone pure-python Tkinter framework.
+A simple light-weight standalone Tkinter framework.
 
 **NOTE:** It has nothing to do with `tkinter.ttk`, just the `tkinter` module.
 

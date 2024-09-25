@@ -2,6 +2,7 @@ from ctypes import windll
 
 from base_classes import PackProperties
 from base_types import Fill
+from compound_widgets import Scrollable
 from layout import Container, FlexLayout, FlexLayoutOptions
 from widgets import Button, Entry, ComboBox, SpinBox, CheckBox
 from window import MainWindow
@@ -154,7 +155,7 @@ from window import MainWindow
 #
 # 	win.mainloop()
 
-DEBUG_COUNT = 4
+DEBUG_COUNT = 400
 
 count = 0
 
@@ -200,7 +201,24 @@ def new_layout_demo():
 	win.show()
 
 
+def scrollable_demo():
+	win = MainWindow('Scrollable Demo', (500, 500))
+
+	scrollable = Scrollable(win, 60)
+
+	def gen_cmd(i: int):
+		return lambda: print(f'Button {i + 1} click!')
+
+	for i in range(DEBUG_COUNT):
+		btn = Button(parent=scrollable, text=f'Button {i + 1}', click_listener=gen_cmd(i))
+		scrollable.add_widget(btn)
+
+	win.add_widget(scrollable, 'pack', PackProperties(expand=True, fill=Fill.Both))
+
+	win.show()
+
+
 if __name__ == '__main__':
 	windll.shcore.SetProcessDpiAwareness(1)
 
-	new_widgets_demo()
+	scrollable_demo()

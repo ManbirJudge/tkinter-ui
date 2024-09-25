@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Tuple, Optional, Dict
 import tkinter as tk
 
+from base_types import WidgetName
 from utils import rgb_to_hex
 
 # TODOS
@@ -202,7 +203,7 @@ class WidgetStyle:
 	foreground: Color | None = None
 	padding: Margin = None
 	margin: Margin = None
-	font: Font = ('Grandview', 10)
+	font: Font = ('Comic Sans MS', 10)
 	cursor: Cursor = Cursor.Arrow
 	border: Border = field(default_factory=Border.default)
 	highlight: Highlight = field(default_factory=Highlight.default)
@@ -224,14 +225,10 @@ class WidgetStyle:
 			if key in field_types:
 				setattr(self, key, value)
 
-			# expected_type = field_types[key]
-			#
-			# if isinstance(value, expected_type) or value is None:
-			# 	setattr(self, key, value)
-			# else:
-			# 	raise TypeError(f'Expected type {expected_type} for field \'{key}\', got {type(value)} instead.')
+			# TODO: type checking
+
 			else:
-				raise AttributeError(f'WidgetStyle  has no attribute \'{key}\'')
+				raise AttributeError(f'WidgetStyle has no attribute \'{key}\'')
 
 		return self
 
@@ -241,9 +238,9 @@ class WidgetStyle:
 class Theme:
 	margin: Dict[str, int]
 	color: Dict[str, Color]
-	widget: Dict[str, WidgetStyle]
+	widget: Dict[WidgetName, WidgetStyle]
 
-	def get(self, name: str):
+	def get(self, name: WidgetName):
 		return deepcopy(self.widget.get(name, WidgetStyle()))
 
 	def margin__(self, margin: str | int | None) -> int:
@@ -305,7 +302,7 @@ THEME = Theme(
 		'on-primary-alt': 'white',
 	},
 	{
-		'label': WidgetStyle(
+		WidgetName.Label: WidgetStyle(
 			margin=(0, 0),
 			padding=('sm', 'sm'),
 			background='.bg',
@@ -313,7 +310,7 @@ THEME = Theme(
 			border=Border(width=0),
 			cursor=Cursor.Arrow
 		),
-		'button': WidgetStyle(
+		WidgetName.Button: WidgetStyle(
 			margin=('n', 'sm'),
 			padding=('lg', 'sm'),
 			background='.primary',
@@ -323,7 +320,7 @@ THEME = Theme(
 			border=Border(width=1, type=BorderType.Raised),
 			cursor=Cursor.Hand2
 		),
-		'entry': WidgetStyle(
+		WidgetName.Entry: WidgetStyle(
 			margin=('n', 'sm'),
 			padding=('n', 'n'),
 			background='.primary-bg',
@@ -333,17 +330,17 @@ THEME = Theme(
 			border=Border(width=1, type=BorderType.Solid),
 			cursor=Cursor.IBeam
 		),
-		'text-area': WidgetStyle(
-			margin=('n', 'n'),
-			padding=('n', 'n'),
-			background='.primary-bg',
-			foreground='.on-primary-bg',
-			background_select='.primary',
-			foreground_select='.on-primary',
-			border=Border(width=1, type=BorderType.Solid),
-			cursor=Cursor.IBeam
-		),
-		'combo-box': WidgetStyle(
+		# 'text-area': WidgetStyle(
+		# 	margin=('n', 'n'),
+		# 	padding=('n', 'n'),
+		# 	background='.primary-bg',
+		# 	foreground='.on-primary-bg',
+		# 	background_select='.primary',
+		# 	foreground_select='.on-primary',
+		# 	border=Border(width=1, type=BorderType.Solid),
+		# 	cursor=Cursor.IBeam
+		# ),
+		WidgetName.ComboBox: WidgetStyle(
 			margin=('n', 'sm'),
 			padding=('n', 'n'),
 			background='.primary-bg',
@@ -353,7 +350,7 @@ THEME = Theme(
 			border=Border(width=1, type=BorderType.Solid),
 			cursor=Cursor.Hand2
 		),
-		'spin-box': WidgetStyle(
+		WidgetName.SpinBox: WidgetStyle(
 			margin=('n', 'sm'),
 			padding=('n', 'n'),
 			background='.primary-bg',
@@ -363,7 +360,7 @@ THEME = Theme(
 			border=Border(width=1, type=BorderType.Solid),
 			cursor=Cursor.IBeam
 		),
-		'check-box': WidgetStyle(
+		WidgetName.CheckBox: WidgetStyle(
 			margin=('n', 'sm'),
 			padding=('lg', 'sm'),
 			background='#f7e4e6',
@@ -373,5 +370,14 @@ THEME = Theme(
 			border=Border(width=1, type=BorderType.Solid),
 			cursor=Cursor.Hand2
 		),
+		# 'slider': WidgetStyle(
+		# 	margin=('sm', 'sm'),
+		# 	padding=(0, 0),
+		# 	background='.bg',
+		# 	foreground='.on-bg',
+		# 	background_select='.primary',
+		# 	foreground_select='.on-primary',
+		# 	border=Border(width=1, type=BorderType.Solid)
+		# )
 	}
 )

@@ -1,25 +1,16 @@
 import tkinter as tk
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Tuple, Literal
+from typing import List, Tuple, Literal, Any
 
-from style import SupportedStyles, WidgetStyle
-from type_classes import Side, Fill, Parent, Anchor
-from widgets import Widget, HasText
-from window import Window
-
-
-# spacer widget
-class Spacer(Widget):
-	@property
-	def supported_styles(self) -> SupportedStyles:
-		return SupportedStyles(True, False, False, False, False, False, False, False, False, False)
-
-	def on_init(self, parent: Parent, **kwargs):
-		self._style = WidgetStyle()
-		self._tk_widget = tk.Frame(master=parent if isinstance(parent, Window) else parent.tk_widget)
+from base_classes import BaseWidget
+from base_types import TkWidget, Anchor, Side, Fill
+from compound_widgets import CompoundWidget
+from style import WidgetStyle
+from widgets import Widget
 
 
+# layout options classes
 @dataclass
 class AbsoluteLayoutOptions:
 	pos: Tuple[int, int]
@@ -37,7 +28,7 @@ class GridLayoutOptions:
 
 @dataclass
 class FlexLayoutOptions:
-	flex: float = 0
+	flex: float = 0  # TODO: implement 😓
 
 
 # layouts
@@ -45,16 +36,20 @@ class Layout(ABC):
 	properties_class = None
 
 	@abstractmethod
-	def lay_out_children(self, cont: Widget, children: List[Widget], children_layout_ppts: list):
+	def render_children(self, cont: TkWidget, children: List[Tuple[Widget | CompoundWidget, Any]]):
+		# TODO: margin/padding
 		pass
 
 
 class AbsoluteLayout(Layout):
 	properties_class = AbsoluteLayoutOptions
 
-	def lay_out_children(self, cont: Widget, children: List[Widget], children_layout_ppts: List[AbsoluteLayoutOptions]):
-		for child, ppts in zip(children, children_layout_ppts):
-			child.place(ppts.pos, ppts.size)
+	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, AbsoluteLayoutOptions]]):
+		for child, ppts in children:
+			child.render(tk_container).place(
+				x=ppts.pos[0], y=ppts.pos[1],
+				width=ppts.size[0], height=ppts.size[1]
+			)
 
 
 class GridLayout(Layout):
@@ -66,33 +61,28 @@ class GridLayout(Layout):
 		self.rows = rows
 		self.columns = columns
 
-	def lay_out_children(self, cont: Widget, children: List[Widget], children_layout_ppts: List[GridLayoutOptions]):
-		cont.tk_widget.grid_rowconfigure(list(range(self.rows)), weight=1, uniform='a')
-		cont.tk_widget.grid_columnconfigure(list(range(self.columns)), weight=1, uniform='b')
+	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, GridLayoutOptions]]):
+		tk_container.grid_rowconfigure(list(range(self.rows)), weight=1, uniform='a')
+		tk_container.grid_columnconfigure(list(range(self.columns)), weight=1, uniform='b')
 
-		for child, ppts in zip(children, children_layout_ppts):
-			child.grid(row=ppts.row, column=ppts.column, row_span=ppts.row_span, column_span=ppts.column_span, sticky=ppts.sticky)
+		for child, ppts in children:
+			child.render(tk_container).grid(row=ppts.row, column=ppts.column, row_span=ppts.row_span, column_span=ppts.column_span, sticky=ppts.sticky)
 
 
 class FlexLayout(Layout):
 	properties_class = FlexLayoutOptions
 
 	def __init__(
-			self,
-			direction: Literal['vertical', 'horizontal'] = 'horizontal',
-			justification: Literal['start', 'center', 'end', 'space-evenly', 'space-between', 'space-around'] = 'center',
-			alignment: Literal['start', 'center', 'end'] = 'center',
+		self,
+		direction: Literal['vertical', 'horizontal'] = 'horizontal',
+		justification: Literal['start', 'center', 'end', 'space-evenly', 'space-between', 'space-around'] = 'center',
+		alignment: Literal['start', 'center', 'end'] = 'center',
 	):
 		self.direction = direction
 		self.justification = justification
 		self.alignment = alignment
 
-	def lay_out_children(
-			self,
-			cont: Widget,
-			children: List[Widget],
-			children_layout_ppts: List[FlexLayoutOptions]
-	):
+	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, FlexLayoutOptions]]):
 		if self.direction == 'horizontal':
 			if self.alignment == 'start':
 				anchor = Anchor.North
@@ -104,41 +94,42 @@ class FlexLayout(Layout):
 				raise Exception('Fuck off.')
 
 			if self.justification == 'start':
-				for child in children:
-					child.pack(Side.Left, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
 
 			elif self.justification == 'center':
-				Spacer(cont).pack(side=Side.Left, expand=True, fill=Fill.Both, anchor=anchor)
+				tk.Frame(tk_container, bg=tk_container['bg']).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
-				for child in children:
-					child.pack(Side.Left, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
 
-				Spacer(cont).pack(side=Side.Left, expand=True, fill=Fill.Both, anchor=anchor)
+				tk.Frame(tk_container, bg=tk_container['bg']).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'end':
-				for child in children:
-					child.pack(Side.Right, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Right.value, anchor=anchor.value)
 
 			elif self.justification == 'space-around':
-				for child in children:
-					child.pack(Side.Left, True, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Left.value, expand=True, anchor=anchor.value)
 
 			elif self.justification == 'space-between':
-				for i, child in enumerate(children):
-					child.pack(Side.Left, anchor=anchor)
+				for i, (child, _) in enumerate(children):
+					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
 
 					if not i == len(children) - 1:
-						Spacer(cont).pack(side=Side.Left, expand=True, fill=Fill.Both, anchor=anchor)
+						tk.Frame(tk_container).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'space-evenly':
-				Spacer(cont).pack(side=Side.Left, expand=True, fill=Fill.Both, anchor=anchor)
+				tk.Frame(tk_container).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
-				for i, child in enumerate(children):
-					child.pack(Side.Left, anchor=anchor)
-					Spacer(cont).pack(side=Side.Left, expand=True, fill=Fill.Both, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
+
+					tk.Frame(tk_container).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			else:
-				print('Fuck off.')
+				raise Exception('Fuck off.')
 
 		if self.direction == 'vertical':
 			if self.alignment == 'start':
@@ -151,84 +142,68 @@ class FlexLayout(Layout):
 				raise Exception('Fuck off.')
 
 			if self.justification == 'start':
-				for child in children:
-					child.pack(Side.Top, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
 
 			elif self.justification == 'center':
-				Spacer(cont).pack(side=Side.Top, expand=True, fill=Fill.Both, anchor=anchor)
+				tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
-				for child in children:
-					child.pack(Side.Top, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
 
-				Spacer(cont).pack(side=Side.Top, expand=True, fill=Fill.Both, anchor=anchor)
+				tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'end':
-				for child in children:
-					child.pack(Side.Bottom, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Bottom.value, anchor=anchor.value)
 
 			elif self.justification == 'space-around':
-				for child in children:
-					child.pack(Side.Top, True, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Top.value, expand=True, anchor=anchor.value)
 
 			elif self.justification == 'space-between':
-				for i, child in enumerate(children):
-					child.pack(Side.Top, anchor=anchor)
+				for i, (child, _) in enumerate(children):
+					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
 
 					if not i == len(children) - 1:
-						Spacer(cont).pack(side=Side.Top, expand=True, fill=Fill.Both, anchor=anchor)
+						tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'space-evenly':
-				Spacer(cont).pack(side=Side.Top, expand=True, fill=Fill.Both, anchor=anchor)
+				tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
-				for i, child in enumerate(children):
-					child.pack(Side.Top, anchor=anchor)
-					Spacer(cont).pack(side=Side.Top, expand=True, fill=Fill.Both, anchor=anchor)
+				for child, _ in children:
+					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
+
+					tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			else:
-				print('Fuck off.')
+				raise Exception('Fuck off.')
 
 
-# widgets
-class Container(Widget):
+# containers
+class Container(CompoundWidget):
 	@property
-	def supported_styles(self) -> SupportedStyles:
-		return SupportedStyles(True, False, False, False, False, False, False, False, False, False)
+	def style(self) -> WidgetStyle:
+		return WidgetStyle()
 
-	def __init__(self, parent: Parent, layout: Layout, **kwargs):
-		super().__init__(parent, **kwargs)
+	@property
+	def count(self) -> int:
+		return len(self._children)
+
+	def __init__(self, parent: BaseWidget, layout: Layout):
+		super().__init__(parent)
 
 		self._layout = layout
-		self._children: List[Widget] = []
-		self._children_layout_ppts: List[layout.properties_class()] = []
+		self._children: List[Tuple[Widget | CompoundWidget, layout.properties_class]] = []
 
-	def on_init(self, parent: Parent, **kwargs):
-		self._style = WidgetStyle()
-		self._tk_widget = tk.Frame(parent)
-
-	def add_widget(self, widget: Widget, layout_ppts):
-		self._children.append(widget)
-
+	def add_widget(self, widget: Widget | CompoundWidget, layout_ppts):
 		assert isinstance(layout_ppts, self._layout.properties_class)
-		self._children_layout_ppts.append(layout_ppts)
 
-	def remove_widget(self, id_: str):
-		i, child = next(((_, __) for (_, __) in enumerate(self._children) if __.id == id_), (None, None))
+		self._children.append((widget, layout_ppts))
 
-		if child is None:
-			raise Exception(f'Children with ID {id_} not found.')
+	def render(self, tk_parent: TkWidget) -> TkWidget:
+		_frame = tk.Frame(tk_parent)
 
-		self._children.pop(i)
-		child[0].hide()
+		self._layout.render_children(_frame, self._children)
 
-	def pack(self, side: Side = Side.Top, expand: bool = False, fill: Fill = Fill.No, anchor: Anchor = Anchor.No):
-		self._layout.lay_out_children(self, self._children, self._children_layout_ppts)
-		super().pack(side, expand, fill, anchor)
-
-	def grid(self, row: int, column: int, row_span: int = 1, column_span: int = 1, sticky: str = 'N'):
-		self._layout.lay_out_children(self, self._children, self._children_layout_ppts)
-		super().grid(row, column, row_span, column_span, sticky)
-
-
-class LabelContainer(HasText, Container):
-	def on_init(self, parent: Parent, **kwargs):
-		self._tk_widget = tk.LabelFrame(parent, text=self.text)
+		return _frame

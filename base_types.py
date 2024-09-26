@@ -1,6 +1,7 @@
 import tkinter as tk
+from collections import namedtuple
 from enum import Enum
-from typing import Any, TypedDict, Type
+from typing import Any, TypedDict, Type, Tuple
 
 # ---
 TkWindow = tk.Tk | tk.Toplevel
@@ -42,6 +43,17 @@ class State(Enum):
 	Disabled = tk.DISABLED
 
 
+class SelectionMode(Enum):
+	Single = tk.SINGLE
+	Multiple = tk.MULTIPLE
+
+
+class ActiveStyle(Enum):
+	No = tk.NONE
+	Underline = tk.UNDERLINE
+	DashedOutline = tk.DOTBOX
+
+
 # ---
 class WidgetName(Enum):
 	# TODO: maybe extend to base widgets too
@@ -52,7 +64,10 @@ class WidgetName(Enum):
 	ComboBox = 'combo-box'
 	SpinBox = 'spin-box'
 	CheckBox = 'check-box'
-	Spacer = 'spacer'
+	RadioButton = 'radio-button'
+	Slider = 'slider'
+	ListBox = 'list-box'
+	Canvas = 'canvas'
 
 
 class WidgetProperty(TypedDict):
@@ -60,3 +75,20 @@ class WidgetProperty(TypedDict):
 	tk_name: str
 	custom_implementation: bool  # has no use yet
 	default: Any | None
+
+
+# ---
+Point = namedtuple('Point', 'x y')
+
+
+class Arrows(Enum):
+	No = None
+	AtFront = 'first'
+	AtRear = 'last'
+	AtBoth = 'both'
+
+
+class CapStyle(Enum):
+	Round = 'round'
+	Projecting = 'projecting'
+	Ass = 'butt'

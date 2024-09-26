@@ -14,6 +14,9 @@ A simple light-weight standalone Tkinter framework.
 - ComboBox
 - SpinBox
 - CheckBox
+- RadioButtons
+- Scrollable
+- Slider
 
 ### Layouts
 - Absolute Layout
@@ -27,15 +30,14 @@ A simple light-weight standalone Tkinter framework.
 ## TODO
 - All Tk widgets
   - Canvas
-  - List box
-  - Radio button
-  - Slider
-  - Scrollbar
+  - ~~List box~~
+  - ~~Radio button~~
+  - ~~Slider~~
 - Toplevel
 - Menus
   - Menu button
-- Compound widgets.
-- Scrollable.
+- ~~Compound widgets.~~
+- ~~Scrollable.~~
     - Virtualized scrollable.
 - (Final concern) - Better dialogs and message boxes
 - TODOS specified in files.

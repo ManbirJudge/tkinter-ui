@@ -11,7 +11,7 @@ from utils import rgb_to_hex
 # - insert styles
 # - button background
 # - element border width
-# - select - color, mode, image
+# - select - color, mode, image, border width
 
 # style types
 Color = str | Tuple[int, int, int] | Tuple[int, int, int, int]
@@ -370,14 +370,39 @@ THEME = Theme(
 			border=Border(width=1, type=BorderType.Solid),
 			cursor=Cursor.Hand2
 		),
-		# 'slider': WidgetStyle(
-		# 	margin=('sm', 'sm'),
-		# 	padding=(0, 0),
-		# 	background='.bg',
-		# 	foreground='.on-bg',
-		# 	background_select='.primary',
-		# 	foreground_select='.on-primary',
-		# 	border=Border(width=1, type=BorderType.Solid)
-		# )
+		WidgetName.Slider: WidgetStyle(
+			margin=('sm', 'sm'),
+			padding=(0, 0),
+			background='.bg',
+			foreground='.on-bg',
+			background_select='.primary',
+			foreground_select='.on-primary',
+			border=Border(width=1, type=BorderType.Solid)
+		),
+		WidgetName.RadioButton: WidgetStyle(
+			margin=('sm', 'sm'),
+			padding=(0, 0),
+			background='.bg',
+			foreground='.on-bg',
+			background_active='.primary-bg',
+			foreground_active='.on-primary-bg',
+			border=Border(width=0, type=BorderType.Flat),
+			cursor=Cursor.Hand2
+		),
+		WidgetName.ListBox: WidgetStyle(
+			margin=('n', 'n'),
+			padding=(0, 0),
+			background='.bg',
+			foreground='.on-bg',
+			border=Border(width=1, type=BorderType.Solid),
+			background_select='.primary-bg',
+			foreground_select='.on-primary-bg'
+		),
+		WidgetName.Canvas: WidgetStyle(
+			margin=('n', 'n'),
+			padding=(0, 0),
+			background='.bg',
+			border=Border(width=1, type=BorderType.Solid)
+		)
 	}
 )

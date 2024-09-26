@@ -3,24 +3,67 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from base_classes import BaseWidget
-from base_types import TkWidget, Side, Fill
+from base_types import TkWidget, Side, Fill, Orientation
 from style import WidgetStyle
-from widgets import Widget
+from widgets import Widget, RadioButton
 
 
 # compound widget
 class CompoundWidget(BaseWidget, ABC):
+	@property
+	def style(self) -> WidgetStyle:
+		return WidgetStyle()
+
 	@abstractmethod
 	def render(self, tk_parent: TkWidget) -> TkWidget:
 		pass
 
 
 # ---
-class Scrollable(CompoundWidget):
-	@property
-	def style(self) -> WidgetStyle:
-		return WidgetStyle()
+class RadioButtonGroup(CompoundWidget):
+	def __init__(
+			self,
+			parent: BaseWidget,
+			options: List[str], default: str = None,
+			orientation: Orientation = Orientation.Vertical
+	):
+		super().__init__(parent)
 
+		self._radio_btns: List[RadioButton] = []
+
+		self._options = []
+		self._orientation = orientation
+		self._value = tk.StringVar(value=default if default is not None else options[0])
+
+		self.set_options(options)
+
+	def render(self, tk_parent: TkWidget) -> tk.Frame:
+		_cont = tk.Frame(tk_parent)
+
+		if self._orientation == Orientation.Vertical:
+			side = Side.Top
+		else:
+			side = Side.Left
+
+		for radio_btn in self._radio_btns:
+			radio_btn.render(_cont).pack(side=side.value)
+
+		return _cont
+
+	@property
+	def value(self) -> str:
+		return self._value.get()
+
+	@value.setter
+	def value(self, value: str):
+		self._value.set(value)
+
+	def set_options(self, options: List[str]):
+		self._options = options
+		self._radio_btns = [RadioButton(parent=self, text=option, value=option, variable=self._value) for option in self._options]
+
+
+class Scrollable(CompoundWidget):
 	@property
 	def count(self) -> int:
 		return len(self._children)
@@ -38,7 +81,7 @@ class Scrollable(CompoundWidget):
 	def add_widget(self, widget: Widget | CompoundWidget):
 		self._children.append(widget)
 
-	def render(self, tk_parent: TkWidget) -> TkWidget:
+	def render(self, tk_parent: TkWidget) -> tk.Frame:
 		_cont_frame = tk.Frame(tk_parent)
 
 		w, h = 0, self.count * self._item_height

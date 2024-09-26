@@ -1,10 +1,11 @@
 import tkinter as tk
+import warnings
 from abc import ABC, abstractmethod
-from typing import Dict, Callable, List, Optional
+from typing import Dict, Callable, List
 
-from base_types import TkWidget, WidgetName, WidgetProperty
 from base_classes import BaseWidget
-from style import WidgetStyle, SupportedStyles
+from base_types import TkWidget, WidgetName, WidgetProperty, Orientation, SelectionMode, ActiveStyle, Point, Arrows, CapStyle
+from style import WidgetStyle, SupportedStyles, Color
 
 
 # TODO
@@ -217,6 +218,8 @@ class Widget(BaseWidget, ABC):
 
 		self.create_tk_widget(tk_parent)
 
+		self.post_create()
+
 		if self._tk_widget is None:
 			raise Exception('TkWidget must not be None!')
 
@@ -226,6 +229,10 @@ class Widget(BaseWidget, ABC):
 		self._rendered = True
 
 		return self._tk_widget
+
+	def post_create(self):
+		# For the widgets that required. Ex - ListBox
+		pass
 
 
 # mixins
@@ -494,3 +501,307 @@ class CheckBox(HasBoolValue, Clickable, HasText, Widget):
 
 	def create_tk_widget(self, tk_parent: TkWidget):
 		self._tk_widget = tk.Checkbutton(tk_parent)
+
+
+class Slider(HasFloatValue, Widget):
+	name = WidgetName.Slider
+	properties = {
+		'orientation': {
+			'type': Orientation,
+			'tk_name': None,
+			'custom_implementation': True
+		},
+		'value': {
+			'type': float,
+			'tk_name': 'variable',
+			'custom_implementation': False
+		},
+
+		'minimum': {
+			'type': float,
+			'tk_name': 'from_',
+			'custom_implementation': False
+		},
+		'maximum': {
+			'type': float,
+			'tk_name': 'to',
+			'custom_implementation': False
+		},
+		'delta': {
+			'type': float,
+			'tk_name': 'resolution',
+			'custom_implementation': False
+		},
+		'show_val': {
+			'type': bool,
+			'tk_name': 'showval',
+			'custom_implementation': False
+		}
+	}
+	supported_styles = SupportedStyles(True, True, True, True, True, False, False, False, True, True)
+
+	def __init__(
+			self,
+			orientation: Orientation = Orientation.Horizontal,
+			minimum: float = 0.0,
+			maximum: float = 100.0,
+			delta: float = 0.5,
+			show_val: bool = False,
+			**kwargs
+	):
+		super().__init__(**kwargs)
+
+		self._ppt_orientation = orientation
+		self._ppt_minimum = minimum
+		self._ppt_maximum = maximum
+		self._ppt_delta = delta
+		self._ppt_show_val = show_val
+
+	def create_tk_widget(self, tk_parent: TkWidget):
+		self._tk_widget = tk.Scale(tk_parent)
+
+	def config_orientation(self):
+		self._tk_widget.configure(orient=self._ppt_orientation.value)
+
+
+class RadioButton(HasText, Widget):
+	name = WidgetName.RadioButton
+	supported_styles = SupportedStyles(True, True, True, True, True, True, False, False, True, True)
+	properties = {
+		'text': {
+			'type': str,
+			'tk_name': 'text',
+			'custom_implementation': False
+		},
+		'value': {
+			'type': str,
+			'tk_name': 'value',
+			'custom_implementation': False
+		},
+		'variable': {
+			'type': tk.StringVar,
+			'tk_name': 'variable',
+			'custom_implementation': False
+		}
+	}
+
+	def __init__(self, value: str, variable: tk.StringVar, **kwargs):
+		super().__init__(**kwargs)
+
+		self._ppt_value = value
+		self._ppt_variable = variable
+
+	def create_tk_widget(self, tk_parent: TkWidget):
+		self._tk_widget = tk.Radiobutton(tk_parent)
+
+
+class ListBox(Widget):
+	# TODO: add scrollbar
+
+	name = WidgetName.ListBox
+	properties = {
+		'selection_mode': {
+			'type': SelectionMode,
+			'tk_name': None,
+			'custom_implementation': True
+		},
+		'active_item_style': {
+			'type': ActiveStyle,
+			'tk_name': None,
+			'custom_implementation': True
+		}
+	}
+	supported_styles = SupportedStyles(True, True, True, True, True, True, True, True, True, True)
+
+	# ---
+	def __init__(self, items: List[str], selection_mode: SelectionMode = SelectionMode.Single, active_item_style: ActiveStyle = ActiveStyle.No, **kwargs):
+		super().__init__(**kwargs)
+
+		self._items = items
+
+		self._ppt_selection_mode = selection_mode
+		self._ppt_active_item_style = active_item_style
+
+	def create_tk_widget(self, tk_parent: TkWidget):
+		self._tk_widget = tk.Listbox(tk_parent)
+
+	def post_create(self):
+		self.add_items_to_list_box()
+
+	# ---
+	def add_items_to_list_box(self):
+		self._tk_widget.insert(tk.END, *self._items)
+
+	def config_selection_mode(self):
+		self._tk_widget.configure(selectmode=self._ppt_selection_mode.value)
+
+	def config_active_item_style(self):
+		self._tk_widget.configure(activestyle=self._ppt_active_item_style.value)
+
+	# ---
+	def style_tk_widget(self):
+		super().style_tk_widget()
+
+		self._tk_widget.configure(selectborderwidth=0, activestyle='none')
+
+	# ---
+	@property
+	def count(self) -> int:
+		return len(self._items)
+
+	@property
+	def selected_count(self) -> int:
+		return len(self.selected_indices)
+
+	@property
+	def selected_items(self) -> List[str]:
+		if not self._rendered:
+			# TODO: maybe remove the restriction
+			raise Exception('ListBox must be rendered to get selected items.')
+
+		return [self._items[i] for i in self.selected_indices]
+
+	@property
+	def selected_indices(self) -> List[int]:
+		if not self._rendered:
+			raise Exception('ListBox must be rendered to get selected indices.')
+
+		return list(self._tk_widget.curselection())
+
+	# ---
+	def select_index(self, i: int):
+		self.select_indices(i, i)
+
+	def select_indices(self, start: int, end: int):
+		if not self._rendered:
+			raise Exception('ListBox must be rendered to select indices.')
+
+		if self._ppt_selection_mode == SelectionMode.Single:
+			warnings.warn('Selecting multiple indices while in \'single\' selection mode. Operation cancelled!', RuntimeWarning)
+			return
+
+		self._tk_widget.selection_set(start, end)
+
+	def select_all(self):
+		self.select_indices(0, self.count - 1)
+
+	# ---
+	def unselect_index(self, i: int):
+		self.unselect_indices(i, i)
+
+	def unselect_indices(self, start: int, end: int):
+		if not self._rendered:
+			raise Exception('ListBox must be rendered to unselect indices.')
+
+		self._tk_widget.selection_clear(start, end)
+
+	def unselect_all(self):
+		self.unselect_indices(0, self.count - 1)
+
+	# ---
+	def remove_item(self, i: int):
+		self.remove_items(i, i)
+
+	def remove_items(self, start: int, end: int):
+		del self._items[start:end]
+
+		if self._rendered:
+			self._tk_widget.delete(start, end)
+
+	def remove_all_items(self):
+		self.remove_items(0, self.count - 1)
+
+	# ---
+	def set_items(self, new_items: List[str]):
+		self.unselect_all()
+		self.remove_all_items()
+
+		self._items = new_items
+
+		if self._rendered:
+			self.add_items_to_list_box()
+
+	# ---
+	def add_item(self, item: str, i: int):
+		self.add_items([item], i)
+
+	def add_items(self, items: List[str], i: int):
+		self._items[i:i] = items
+
+		if self._rendered:
+			self._tk_widget.insert(i, *items)
+
+	def append_item(self, item: str):
+		self.append_items([item])
+
+	def append_items(self, items: List[str]):
+		self.add_items(items, self.count - 1)
+
+
+class Canvas(Widget):
+	name = WidgetName.Canvas
+	properties = {}
+	supported_styles = SupportedStyles(True, False, False, True, True, True, True, True, True, True)
+
+	# ---
+	def create_tk_widget(self, tk_parent: TkWidget):
+		self._tk_widget = tk.Canvas(tk_parent)
+
+	# ---
+	def create_line(
+			self,
+			pt1: Point,
+			pt2: Point,
+			fill_color: Color = 'white',
+			outline_width: int = 1,
+
+			arrows: Arrows = Arrows.No,
+			cap_style: CapStyle = CapStyle.Round
+	):
+		assert self._rendered
+
+		self._tk_widget.create_line(
+			pt1.x, pt1.y,
+			pt2.x, pt2.y,
+			fill=self.theme.color_(fill_color),
+			width=outline_width,
+			arrow=arrows.value,
+			capstyle=cap_style.value,
+			smooth=True
+		)
+
+	def create_rect(
+			self,
+			pt1: Point,
+			pt2: Point,
+			outline_color: Color = 'black',
+			fill_color: Color = 'white',
+			outline_width: int = 1
+	):
+		assert self._rendered
+
+		self._tk_widget.create_rectangle(
+			pt1.x, pt1.y,
+			pt2.x, pt2.y,
+			fill=self.theme.color_(fill_color),
+			outline=self.theme.color_(outline_color),
+			width=outline_width
+		)
+
+	def create_ellipse(
+			self,
+			pt1: Point,
+			pt2: Point,
+			outline_color: Color = 'black',
+			fill_color: Color = 'white',
+			outline_width: int = 1
+	):
+		assert self._rendered
+
+		self._tk_widget.create_oval(
+			pt1.x, pt1.y,
+			pt2.x, pt2.y,
+			fill=self.theme.color_(fill_color),
+			outline=self.theme.color_(outline_color),
+			width=outline_width
+		)

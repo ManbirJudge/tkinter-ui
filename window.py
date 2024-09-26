@@ -85,9 +85,13 @@ class MainWindow(BaseWindow):
 		return self._theme
 
 	def __init__(self, title: str, size: Tuple[int, int], theme: Theme = THEME):
-		super().__init__(title, size)
-
 		self._theme = theme
 
+		super().__init__(title, size)
+
 	def create_tk_win(self):
-		return tk.Tk()
+		_ = tk.Tk()
+
+		_.configure(bg=self.theme.color_('.bg'))
+
+		return _

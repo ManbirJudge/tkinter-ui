@@ -37,7 +37,7 @@ class BaseWidget(ABC):
 @dataclass
 class PackProperties:
 	side: Side = Side.Top
-	expand: bool = True
+	expand: bool = False
 	fill: Fill = Fill.No
 	anchor: Anchor = Anchor.No
 

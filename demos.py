@@ -1,10 +1,12 @@
+import random
 from ctypes import windll
 
 from base_classes import PackProperties
-from base_types import Fill
-from compound_widgets import Scrollable
+from base_types import Fill, SelectionMode, Point, CapStyle, Arrows
+from compound_widgets import Scrollable, RadioButtonGroup
 from layout import Container, FlexLayout, FlexLayoutOptions
-from widgets import Button, Entry, ComboBox, SpinBox, CheckBox
+from utils import gen_random_color
+from widgets import Button, Entry, ComboBox, SpinBox, CheckBox, Slider, ListBox, Canvas
 from window import MainWindow
 
 # N_BTNS = 4
@@ -155,7 +157,9 @@ from window import MainWindow
 #
 # 	win.mainloop()
 
-DEBUG_COUNT = 400
+DEBUG_COUNT = 8000
+FIRST_NAMES = ['Manbir', 'Arjun', 'Harsh', 'Taran', 'Naman', 'Aryan', 'Jaideep', 'Arman', 'Gurveer', 'Raghav', 'Gurjeet', 'Pawan', 'Harveer', 'Gursewak', 'Ishant', 'Imrose', 'Gursharan']
+LAST_NAMES = ['Singh', 'Judge', 'Saini', 'Garg', 'Bedi', 'Gupta', 'Kansal', 'Sanga', 'Singla', 'Ghotra', 'Lubana', 'Sahota', 'Gill', 'Pannu', 'Sharma', 'Babar']
 
 count = 0
 
@@ -169,16 +173,20 @@ def new_widgets_demo():
 	combo = ComboBox(parent=win, options=['A', 'B', 'C'])
 	spin = SpinBox(parent=win, minimum=-10, maximum=10, delta=0.25, init_value=5)
 	check = CheckBox(parent=win, text='You gay?')
+	slider = Slider(parent=win, show_val=True)
+	radio_group = RadioButtonGroup(parent=win, options=['A', 'B', 'C'])
 	btn = Button(
 		parent=win,
 		text='Click me!',
-		click_listener=lambda: print(entry.text, combo.text, spin.value, check.value)
+		click_listener=lambda: print(entry.text, combo.text, spin.value, check.value, slider.value, radio_group.value)
 	)
 
 	cont.add_widget(entry, FlexLayoutOptions())
 	cont.add_widget(combo, FlexLayoutOptions())
 	cont.add_widget(spin, FlexLayoutOptions())
 	cont.add_widget(check, FlexLayoutOptions())
+	cont.add_widget(slider, FlexLayoutOptions())
+	cont.add_widget(radio_group, FlexLayoutOptions())
 	cont.add_widget(btn, FlexLayoutOptions())
 
 	win.add_widget(cont, 'pack', PackProperties(expand=True, fill=Fill.Both))
@@ -206,11 +214,14 @@ def scrollable_demo():
 
 	scrollable = Scrollable(win, 60)
 
-	def gen_cmd(i: int):
-		return lambda: print(f'Button {i + 1} click!')
+	def gen_cmd(i: int, en: Entry):
+		return lambda: print(f'Button {i + 1} click! Entry {i + 1} text = {en.text}')
 
-	for i in range(DEBUG_COUNT):
-		btn = Button(parent=scrollable, text=f'Button {i + 1}', click_listener=gen_cmd(i))
+	for i in range(int(DEBUG_COUNT / 2)):
+		entry = Entry(parent=scrollable)
+		btn = Button(parent=scrollable, text=f'Button {i + 1}', click_listener=gen_cmd(i, entry))
+
+		scrollable.add_widget(entry)
 		scrollable.add_widget(btn)
 
 	win.add_widget(scrollable, 'pack', PackProperties(expand=True, fill=Fill.Both))
@@ -218,7 +229,47 @@ def scrollable_demo():
 	win.show()
 
 
+def list_box_demo():
+	win = MainWindow('ListBox Demo', (500, 500))
+
+	list_box = ListBox(
+		parent=win,
+		items=[f'{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}' for i in range(DEBUG_COUNT)],
+		selection_mode=SelectionMode.Single
+	)
+
+	def on_click():
+		list_box.select_indices(0, 10)
+		print(list_box.selected_items)
+
+	btn = Button(parent=win, text='Get Selected', click_listener=on_click)
+
+	win.add_widget(list_box, 'pack', PackProperties(expand=True, fill=Fill.Both))
+	win.add_widget(btn, 'pack', PackProperties(expand=False))
+
+	win.show()
+
+
+def canvas_demo():
+	win = MainWindow('Canvas Demo', (500, 500))
+
+	canvas = Canvas(win)
+
+	def on_click():
+		c1 = gen_random_color()
+		c2 = gen_random_color()
+
+		canvas.create_rect(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 800), random.randint(100, 800)), c1, c2, 4)
+		canvas.create_ellipse(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 800), random.randint(100, 800)), c1, c2, 4)
+		canvas.create_line(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 800), random.randint(100, 800)), c1, 4, Arrows.AtBoth)
+
+	win.add_widget(canvas, 'pack', PackProperties(expand=True, fill=Fill.Both))
+	win.add_widget(Button(parent=win, text='Do something', click_listener=on_click), 'pack', PackProperties())
+
+	win.show()
+
+
 if __name__ == '__main__':
 	windll.shcore.SetProcessDpiAwareness(1)
 
-	scrollable_demo()
+	canvas_demo()

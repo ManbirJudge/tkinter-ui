@@ -6,7 +6,7 @@ from typing import List, Tuple, Literal, Any
 from base_classes import BaseWidget
 from base_types import TkWidget, Anchor, Side, Fill
 from compound_widgets import CompoundWidget
-from style import WidgetStyle
+from style import WidgetStyle, Theme
 from widgets import Widget
 
 
@@ -36,7 +36,7 @@ class Layout(ABC):
 	properties_class = None
 
 	@abstractmethod
-	def render_children(self, cont: TkWidget, children: List[Tuple[Widget | CompoundWidget, Any]]):
+	def render_children(self, cont: TkWidget, children: List[Tuple[Widget | CompoundWidget, Any]], theme: Theme):
 		# TODO: margin/padding
 		pass
 
@@ -44,7 +44,7 @@ class Layout(ABC):
 class AbsoluteLayout(Layout):
 	properties_class = AbsoluteLayoutOptions
 
-	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, AbsoluteLayoutOptions]]):
+	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, AbsoluteLayoutOptions]], theme: Theme):
 		for child, ppts in children:
 			child.render(tk_container).place(
 				x=ppts.pos[0], y=ppts.pos[1],
@@ -61,7 +61,7 @@ class GridLayout(Layout):
 		self.rows = rows
 		self.columns = columns
 
-	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, GridLayoutOptions]]):
+	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, GridLayoutOptions]], theme: Theme):
 		tk_container.grid_rowconfigure(list(range(self.rows)), weight=1, uniform='a')
 		tk_container.grid_columnconfigure(list(range(self.columns)), weight=1, uniform='b')
 
@@ -82,7 +82,9 @@ class FlexLayout(Layout):
 		self.justification = justification
 		self.alignment = alignment
 
-	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, FlexLayoutOptions]]):
+	def render_children(self, tk_container: TkWidget, children: List[Tuple[Widget | CompoundWidget, FlexLayoutOptions]], theme: Theme):
+		bg = tk_container['bg']
+
 		if self.direction == 'horizontal':
 			if self.alignment == 'start':
 				anchor = Anchor.North
@@ -98,12 +100,12 @@ class FlexLayout(Layout):
 					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
 
 			elif self.justification == 'center':
-				tk.Frame(tk_container, bg=tk_container['bg']).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+				tk.Frame(tk_container, bg=bg).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 				for child, _ in children:
 					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
 
-				tk.Frame(tk_container, bg=tk_container['bg']).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+				tk.Frame(tk_container, bg=bg).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'end':
 				for child, _ in children:
@@ -118,15 +120,15 @@ class FlexLayout(Layout):
 					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
 
 					if not i == len(children) - 1:
-						tk.Frame(tk_container).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+						tk.Frame(tk_container, bg=bg).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'space-evenly':
-				tk.Frame(tk_container).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+				tk.Frame(tk_container, bg=bg).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 				for child, _ in children:
 					child.render(tk_container).pack(side=Side.Left.value, anchor=anchor.value)
 
-					tk.Frame(tk_container).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+					tk.Frame(tk_container, bg=bg).pack(side=Side.Left.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			else:
 				raise Exception('Fuck off.')
@@ -146,12 +148,12 @@ class FlexLayout(Layout):
 					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
 
 			elif self.justification == 'center':
-				tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+				tk.Frame(tk_container, bg=bg).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 				for child, _ in children:
 					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
 
-				tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+				tk.Frame(tk_container, bg=bg).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'end':
 				for child, _ in children:
@@ -166,15 +168,15 @@ class FlexLayout(Layout):
 					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
 
 					if not i == len(children) - 1:
-						tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+						tk.Frame(tk_container, bg=bg).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			elif self.justification == 'space-evenly':
-				tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+				tk.Frame(tk_container, bg=bg).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 				for child, _ in children:
 					child.render(tk_container).pack(side=Side.Top.value, anchor=anchor.value)
 
-					tk.Frame(tk_container).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
+					tk.Frame(tk_container, bg=bg).pack(side=Side.Top.value, expand=True, fill=Fill.Both.value, anchor=anchor.value)
 
 			else:
 				raise Exception('Fuck off.')
@@ -202,8 +204,8 @@ class Container(CompoundWidget):
 		self._children.append((widget, layout_ppts))
 
 	def render(self, tk_parent: TkWidget) -> TkWidget:
-		_frame = tk.Frame(tk_parent)
+		_frame = tk.Frame(tk_parent, background=self.theme.color_('.bg'))
 
-		self._layout.render_children(_frame, self._children)
+		self._layout.render_children(_frame, self._children, self.theme)
 
 		return _frame

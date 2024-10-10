@@ -1,6 +1,8 @@
 import random
-from typing import Tuple, List
+from typing import Tuple, List, Any
 import colorsys
+
+from base_types import Point
 
 RGB = Tuple[int, int, int]
 HSL = Tuple[float, float, float]
@@ -51,7 +53,7 @@ def adjust_brightness(rgb: RGB, factor: float):
 	hls[1] = max(min(hls[1] * (1 + factor), 1.0), 0.0)
 
 	# Convert back to RGB
-	return hsl_to_rgb(tuple(hls))
+	return hsl_to_rgb((hls[0], hls[1], hls[2]))
 
 
 def darken(rgb: RGB, factor: float = 0.1):
@@ -66,3 +68,18 @@ def is_dark(color: RGB) -> bool:
 	luminance = 0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2]
 
 	return luminance < 128
+
+
+def gi(lst: list, arg: str, val: Any):
+	if isinstance(lst[0], dict):
+		return next((_ for _ in lst if _.get(arg, None) == val), None)
+	else:
+		return next((_ for _ in lst if getattr(_, arg) == val), None)
+
+
+def gen_rand_pt(x_range: Tuple[int, int] = (0, 500), y_range: Tuple[int, int] = (0, 500)):
+	return Point(random.randint(x_range[0], x_range[1]), random.randint(y_range[0], y_range[1]))
+
+
+def cap(word: str) -> str:
+	return word[0].upper() + word[1:]

@@ -1,29 +1,41 @@
 import tkinter as tk
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import List
 
-from base_classes import BaseWidget
-from base_types import TkWidget, Side, Fill, Orientation
-from style import WidgetStyle
-from widgets import Widget, RadioButton
+from base_types import TkWidget, Side, Fill, Orientation, CompoundWidgetName
+from base_widget import BaseWidget, BaseWidgetProperty
+from object import Object
+from style import CompoundWidgetStyle
+from widget import Widget, RadioButton
 
 
-# compound widget
+# ---
+class CompoundWidgetProperty(BaseWidgetProperty):
+	pass
+
+
 class CompoundWidget(BaseWidget, ABC):
-	@property
-	def style(self) -> WidgetStyle:
-		return WidgetStyle()
+	name: CompoundWidgetName
+	properties: List[CompoundWidgetProperty]
 
-	@abstractmethod
-	def render(self, tk_parent: TkWidget) -> TkWidget:
-		pass
+	# ---
+	@property
+	def style(self) -> CompoundWidgetStyle:
+		return self._style
+
+	# constructor
+	def __init__(self, parent: Object = None, style: CompoundWidgetStyle = None):
+		super().__init__(parent, style)
 
 
 # ---
 class RadioButtonGroup(CompoundWidget):
+	name = CompoundWidgetName.RadioButtonGroup
+	properties = []
+
 	def __init__(
 			self,
-			parent: BaseWidget,
+			parent: Object,
 			options: List[str], default: str = None,
 			orientation: Orientation = Orientation.Vertical
 	):
@@ -37,8 +49,8 @@ class RadioButtonGroup(CompoundWidget):
 
 		self.set_options(options)
 
-	def render(self, tk_parent: TkWidget) -> tk.Frame:
-		_cont = tk.Frame(tk_parent)
+	def create_tk_widget(self, tk_parent: TkWidget):
+		self._tk_widget = tk.Frame(tk_parent)
 
 		if self._orientation == Orientation.Vertical:
 			side = Side.Top
@@ -46,9 +58,13 @@ class RadioButtonGroup(CompoundWidget):
 			side = Side.Left
 
 		for radio_btn in self._radio_btns:
-			radio_btn.render(_cont).pack(side=side.value)
+			radio_btn.render(self._tk_widget).pack(side=side.value)
 
-		return _cont
+	def config_tk_widget(self, which_ones: List[str] = None):
+		pass
+
+	def style_tk_widget(self):
+		pass
 
 	@property
 	def value(self) -> str:
@@ -64,13 +80,16 @@ class RadioButtonGroup(CompoundWidget):
 
 
 class Scrollable(CompoundWidget):
+	name = CompoundWidgetName.Scrollable
+	properties = []
+
 	@property
 	def count(self) -> int:
 		return len(self._children)
 
 	def __init__(
 			self,
-			parent: BaseWidget,
+			parent: Object,
 			item_height: int
 	):
 		super().__init__(parent)
@@ -81,17 +100,17 @@ class Scrollable(CompoundWidget):
 	def add_widget(self, widget: Widget | CompoundWidget):
 		self._children.append(widget)
 
-	def render(self, tk_parent: TkWidget) -> tk.Frame:
-		_cont_frame = tk.Frame(tk_parent)
+	def create_tk_widget(self, tk_parent: TkWidget):
+		self._tk_widget = tk.Frame(tk_parent)
 
 		w, h = 0, self.count * self._item_height
 
-		_canvas = tk.Canvas(_cont_frame, scrollregion=(0, 0, w, h))
-		_scroll_bar = tk.Scrollbar(_cont_frame, command=_canvas.yview)
+		_canvas = tk.Canvas(self._tk_widget, scrollregion=(0, 0, w, h))
+		_scroll_bar = tk.Scrollbar(self._tk_widget, command=_canvas.yview)
 
 		_canvas.config(yscrollcommand=_scroll_bar.set)
 
-		_sub_frame = tk.Frame(_cont_frame)
+		_sub_frame = tk.Frame(self._tk_widget)
 
 		for child in self._children:
 			child.render(_sub_frame).pack(side=Side.Top.value, expand=True, fill=Fill.No.value)
@@ -105,11 +124,15 @@ class Scrollable(CompoundWidget):
 			_canvas.create_window(
 				(0, 0),
 				window=_sub_frame,
-				width=_cont_frame.winfo_width() - _scroll_bar.winfo_width(), height=h,
+				width=self._tk_widget.winfo_width() - _scroll_bar.winfo_width(), height=h,
 				anchor='nw'
 			)
 
-		_cont_frame.bind('<Configure>', on_update)
+		self._tk_widget.bind('<Configure>', on_update)
 		_canvas.bind_all('<MouseWheel>', lambda evt: _canvas.yview_scroll(-int(evt.delta / 60), 'units'))
 
-		return _cont_frame
+	def config_tk_widget(self, which_ones: List[str] = None):
+		pass
+
+	def style_tk_widget(self):
+		pass

@@ -1,12 +1,13 @@
 import random
 from ctypes import windll
 
-from base_classes import PackProperties
-from base_types import Fill, SelectionMode, Point, CapStyle, Arrows
-from compound_widgets import Scrollable, RadioButtonGroup
+from base_types import Fill, SelectionMode
+from base_widget import PackProperties
+from canvas import Canvas
+from compound_widget import Scrollable, RadioButtonGroup
 from layout import Container, FlexLayout, FlexLayoutOptions
 from utils import gen_random_color
-from widgets import Button, Entry, ComboBox, SpinBox, CheckBox, Slider, ListBox, Canvas
+from widget import Button, Entry, ComboBox, SpinBox, CheckBox, Slider, ListBox
 from window import MainWindow
 
 # N_BTNS = 4
@@ -71,7 +72,7 @@ from window import MainWindow
 #
 # 	lbl = Label(
 # 		parent=win,
-# 		text='Labul!'
+# 		text='Label!'
 # 	)
 # 	lbl.pack(expand=True)
 #
@@ -157,9 +158,12 @@ from window import MainWindow
 #
 # 	win.mainloop()
 
-DEBUG_COUNT = 8000
+DEBUG_COUNT = 1
 FIRST_NAMES = ['Manbir', 'Arjun', 'Harsh', 'Taran', 'Naman', 'Aryan', 'Jaideep', 'Arman', 'Gurveer', 'Raghav', 'Gurjeet', 'Pawan', 'Harveer', 'Gursewak', 'Ishant', 'Imrose', 'Gursharan']
 LAST_NAMES = ['Singh', 'Judge', 'Saini', 'Garg', 'Bedi', 'Gupta', 'Kansal', 'Sanga', 'Singla', 'Ghotra', 'Lubana', 'Sahota', 'Gill', 'Pannu', 'Sharma', 'Babar']
+
+with open('assets/words.txt', 'r') as words_f:
+	WORDS = words_f.readlines()
 
 count = 0
 
@@ -234,8 +238,8 @@ def list_box_demo():
 
 	list_box = ListBox(
 		parent=win,
-		items=[f'{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}' for i in range(DEBUG_COUNT)],
-		selection_mode=SelectionMode.Single
+		items=[f'{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}' for _ in range(DEBUG_COUNT)],
+		selection_mode=SelectionMode.Multiple
 	)
 
 	def on_click():
@@ -250,18 +254,27 @@ def list_box_demo():
 	win.show()
 
 
+rprx = (0, 1000)
+rpry = (0, 750)
+
+
 def canvas_demo():
 	win = MainWindow('Canvas Demo', (500, 500))
 
 	canvas = Canvas(win)
 
 	def on_click():
-		c1 = gen_random_color()
-		c2 = gen_random_color()
+		for _ in range(DEBUG_COUNT):
+			c1 = gen_random_color()
+			c2 = gen_random_color()
 
-		canvas.create_rect(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 800), random.randint(100, 800)), c1, c2, 4)
-		canvas.create_ellipse(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 800), random.randint(100, 800)), c1, c2, 4)
-		canvas.create_line(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 800), random.randint(100, 800)), c1, 4, Arrows.AtBoth)
+			# canvas.create_rect(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 1500), random.randint(100, 1500)), c1, c2, 4)
+			# canvas.draw_ellipse(gen_rand_pt(rprx, rpry), gen_rand_pt(rprx, rpry), c1, c2, random.randint(0, 6))
+			# canvas.draw_arc(gen_rand_pt(rprx, rpry), gen_rand_pt(rprx, rpry), c1, random.randint(0, 6))
+			# canvas.create_line(Point(random.randint(10, 500), random.randint(10, 500)), Point(random.randint(100, 1500), random.randint(100, 1500)), c1, 4, Arrows.AtBoth)
+			# canvas.create_circle(gen_rand_pt(rprx, rpry), random.randint(2, 90), c1, c2, random.randint(0, 6))
+			# canvas.draw_text(gen_rand_pt(rprx, rpry), cap(random.choice(WORDS)), c2)
+			# canvas.draw_image(Point(0, 0), Image.open(r'D:\Manbir\PRO gramming\6. Tkinter UI\assets\cursors\List 1.png'))
 
 	win.add_widget(canvas, 'pack', PackProperties(expand=True, fill=Fill.Both))
 	win.add_widget(Button(parent=win, text='Do something', click_listener=on_click), 'pack', PackProperties())

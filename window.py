@@ -2,15 +2,16 @@ import tkinter as tk
 from abc import ABC, abstractmethod
 from typing import Tuple, Literal, List
 
-from base_classes import PackProperties, PlaceProperties
 from base_types import TkWindow
-from compound_widgets import CompoundWidget
+from base_widget import PackProperties, PlaceProperties
+from compound_widget import CompoundWidget
+from object import Object
 from style import Theme, THEME
-from widgets import BaseWidget, Widget
+from widget import Widget
 
 
 # base window
-class BaseWindow(BaseWidget, ABC):
+class WindowLike(Object, ABC):
 	# ---
 	def __init__(self, title: str, size: Tuple[int, int], pos: Tuple[int, int] = None):
 		super().__init__(None)
@@ -79,7 +80,7 @@ class BaseWindow(BaseWidget, ABC):
 
 
 # window
-class MainWindow(BaseWindow):
+class MainWindow(WindowLike):
 	@property
 	def theme(self) -> Theme:
 		return self._theme

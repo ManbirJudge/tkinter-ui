@@ -1,41 +1,39 @@
 import tkinter as tk
 import warnings
-from abc import ABC, abstractmethod
-from typing import Dict, Callable, List
+from abc import ABC
+from typing import Callable, List
 
-from base_classes import BaseWidget
-from base_types import TkWidget, WidgetName, WidgetProperty, Orientation, SelectionMode, ActiveStyle, Point, Arrows, CapStyle
-from style import WidgetStyle, SupportedStyles, Color
+from base_types import TkWidget, WidgetName, Orientation, SelectionMode, ActiveStyle
+from base_widget import BaseWidget, BaseWidgetProperty
+from object import Object
+from style import SupportedStyles, WidgetStyle
+from utils import gi
 
 
 # TODO
 # - visibility
 # - enable/disable
 
-# widget
+
+# ---
+class WidgetProperty(BaseWidgetProperty):
+	tk_name: str
+	custom_implementation: bool
+
+
 class Widget(BaseWidget, ABC):
-	# properties
 	name: WidgetName
-	properties: Dict[str, WidgetProperty]
+	properties: List[WidgetProperty]
 	supported_styles: SupportedStyles = SupportedStyles(False, False, False, False, False, False, False, False, False, False)
 
+	# ---
 	@property
 	def style(self) -> WidgetStyle:
 		return self._style
 
-	@property
-	def rendered(self) -> bool:
-		return self._rendered
-
-	# initialization
-	def __init__(self, parent: BaseWidget, style: WidgetStyle = None):
-		super().__init__(parent)
-
-		print('Initializing Widget.')
-
-		self._style = style if style is not None else self.theme.get(self.name)
-		self._rendered = False
-		self._tk_widget = None
+	# constructor
+	def __init__(self, parent: Object = None, style: WidgetStyle = None):
+		super().__init__(parent, style)
 
 	# modification
 	def update(self, **ppts):
@@ -44,11 +42,13 @@ class Widget(BaseWidget, ABC):
 		:param ppts: Update properties.
 		"""
 
+		ppt_names = [_['name'] for _ in self.properties]
+
 		for ppt_name in ppts:
-			if ppt_name not in list(self.properties.keys()):
+			if ppt_name not in ppt_names:
 				raise Exception(f'\'{ppt_name}\' is not a valid property of {self.__class__.__name__}.')
 
-			ppt = self.properties[ppt_name]
+			ppt = next((x for x in self.properties if x['name'] == ppt_names), None)
 			ppt_new_val = ppts[ppt_name]
 
 			if not isinstance(ppt_new_val, ppt['type']):
@@ -60,36 +60,33 @@ class Widget(BaseWidget, ABC):
 			self.config_tk_widget()
 
 	# Tk compatibility
-	@abstractmethod
-	def create_tk_widget(self, tk_parent: TkWidget):
-		pass
-
 	def config_tk_widget(self, which_ones: List[str] = None):
-		if self._tk_widget is None:
-			return
+		super().config_tk_widget(which_ones)
 
 		if which_ones is None:
 			which_ones = []
 
 		if len(which_ones) == 0:
-			for ppt_name, ppt in self.properties.items():
+			for ppt in self.properties:
 				if ppt['custom_implementation']:
-					custom_func_name = f'config_{ppt_name}'
+					custom_func_name = f'config_{ppt["name"]}'
 
 					if not hasattr(self, custom_func_name):
-						raise Exception(f'\'{self.__class__.__name__}\' must have function \'{custom_func_name}\' to configure the property \'{ppt_name}\'.')
+						raise Exception(f'\'{self.__class__.__name__}\' must have function \'{custom_func_name}\' to configure the property \'{ppt["name"]}\'.')
 
 					getattr(self, custom_func_name)()
 
 				else:
-					self._tk_widget[ppt['tk_name']] = getattr(self, f'_ppt_{ppt_name}')
+					self._tk_widget[ppt['tk_name']] = getattr(self, f'_ppt_{ppt["name"]}')
 
 		else:
 			for ppt_name in which_ones:
-				if ppt_name not in (self.properties.keys()):
+				_ = next((x for x in self.properties if x['name'] == ppt_name), None)
+
+				if _ is None:
 					raise Exception(f'Cannot update \'{ppt_name}\' as it is not a property of \'{self.__class__.__name__}\'.')
 
-				ppt = self.properties[ppt_name]
+				ppt = _
 
 				# TODO: implement the following code only once (DRY)
 				if ppt['custom_implementation']:
@@ -104,6 +101,8 @@ class Widget(BaseWidget, ABC):
 					self._tk_widget[ppt['tk_name']] = getattr(self, f'_ppt_{ppt_name}')
 
 	def style_tk_widget(self):
+		super().style_tk_widget()
+
 		widget = self._tk_widget
 		theme = self.theme
 
@@ -212,28 +211,6 @@ class Widget(BaseWidget, ABC):
 				if bg_clr is not None:
 					widget.configure(highlightbackground=bg_clr)
 
-	def render(self, tk_parent: TkWidget) -> TkWidget:
-		if self._rendered:
-			raise Exception('Widget is already rendered!')
-
-		self.create_tk_widget(tk_parent)
-
-		self.post_create()
-
-		if self._tk_widget is None:
-			raise Exception('TkWidget must not be None!')
-
-		self.config_tk_widget()
-		self.style_tk_widget()
-
-		self._rendered = True
-
-		return self._tk_widget
-
-	def post_create(self):
-		# For the widgets that required. Ex - ListBox
-		pass
-
 
 # mixins
 class WidgetMixin(ABC):
@@ -250,7 +227,7 @@ class HasText(WidgetMixin):
 	def __init__(self, text: str, **kwargs):
 		super().__init__(**kwargs)
 
-		if self.properties.get('text', None) is None:
+		if next((x for x in self.properties if x['name'] == 'text'), None) is None:
 			raise Exception(f'\'{self.__class__.__name__}\' must have \'text\' property.')
 
 		print('Initializing HasText.')
@@ -271,7 +248,7 @@ class HasVariableText(WidgetMixin):
 	def __init__(self, init_text: str = '', **kwargs):
 		super().__init__(**kwargs)
 
-		if self.properties.get('txt_var', None) is None:
+		if next((x for x in self.properties if x['name'] == 'txt_var'), None) is None:
 			raise Exception(f'\'{self.__class__.__name__}\' must have \'txt_var\' property.')
 
 		self._ppt_txt_var = tk.StringVar(self._tk_widget, init_text)
@@ -289,7 +266,7 @@ class HasStrValue(WidgetMixin):
 	def __init__(self, init_value: str = '', **kwargs):
 		super().__init__(**kwargs)
 
-		if self.properties.get('value', None) is None:
+		if next((x for x in self.properties if x['name'] == 'value'), None) is None:
 			raise Exception(f'\'{self.__class__.__name__}\' must have \'value\' property.')
 
 		self._ppt_value = tk.StringVar(self._tk_widget, init_value)
@@ -307,7 +284,7 @@ class HasFloatValue(WidgetMixin):
 	def __init__(self, init_value: float = 0.0, **kwargs):
 		super().__init__(**kwargs)
 
-		if self.properties.get('value', None) is None:
+		if next((x for x in self.properties if x['name'] == 'value'), None) is None:
 			raise Exception(f'\'{self.__class__.__name__}\' must have \'value\' property.')
 
 		self._ppt_value = tk.DoubleVar(self._tk_widget, init_value)
@@ -325,7 +302,7 @@ class HasBoolValue(WidgetMixin):
 	def __init__(self, init_value: bool = False, **kwargs):
 		super().__init__(**kwargs)
 
-		if self.properties.get('value', None) is None:
+		if next((x for x in self.properties if x['name'] == 'value'), None) is None:
 			raise Exception(f'\'{self.__class__.__name__}\' must have \'value\' property.')
 
 		self._ppt_value = tk.BooleanVar(self._tk_widget, init_value)
@@ -343,7 +320,7 @@ class Clickable(WidgetMixin):
 	def __init__(self, click_listener: Callable = None, **kwargs):
 		super().__init__(**kwargs)
 
-		if self.properties.get('click_listener', None) is None:
+		if next((x for x in self.properties if x['name'] == 'click_listener'), None) is None:
 			raise Exception(f'\'{self.__class__.__name__}\' must have \'click_listener\' property.')
 
 		print('Initializing Clickable.')
@@ -363,18 +340,20 @@ class Clickable(WidgetMixin):
 # widgets
 class Button(Clickable, HasText, Widget):
 	name = WidgetName.Button
-	properties = {
-		'text': {
+	properties = [
+		{
+			'name': 'text',
 			'type': str,
 			'tk_name': 'text',
 			'custom_implementation': False
 		},
-		'click_listener': {
+		{
+			'name': 'click_listener',
 			'type': Callable,
 			'tk_name': 'command',
 			'custom_implementation': False
 		}
-	}
+	]
 	supported_styles = SupportedStyles(True, True, True, True, False, True, False, False, True, False)
 
 	def create_tk_widget(self, tk_parent: TkWidget):
@@ -383,13 +362,14 @@ class Button(Clickable, HasText, Widget):
 
 class Entry(HasVariableText, Widget):
 	name = WidgetName.Entry
-	properties = {
-		'txt_var': {
+	properties = [
+		{
+			'name': 'txt_var',
 			'type': tk.StringVar,
 			'tk_name': 'textvariable',
 			'custom_implementation': False
 		}
-	}
+	]
 	supported_styles = SupportedStyles(True, True, True, True, True, False, True, True, True, True)
 
 	def create_tk_widget(self, tk_parent: TkWidget):
@@ -398,18 +378,20 @@ class Entry(HasVariableText, Widget):
 
 class ComboBox(HasVariableText, Widget):
 	name = WidgetName.ComboBox
-	properties = {
-		'txt_var': {
+	properties = [
+		{
+			'name': 'txt_var',
 			'type': str,
 			'tk_name': 'textvariable',
 			'custom_implementation': False
 		},
-		'options': {
+		{
+			'name': 'options',
 			'type': list,
 			'tk_name': None,
 			'custom_implementation': True
 		}
-	}
+	]
 	supported_styles = SupportedStyles(True, True, True, True, False, True, False, False, True, False)
 
 	def __init__(self, options: List[str], **kwargs):
@@ -436,34 +418,39 @@ class ComboBox(HasVariableText, Widget):
 
 class SpinBox(HasFloatValue, Widget):
 	name = WidgetName.SpinBox
-	properties: Dict[str, WidgetProperty] = {
-		'minimum': {
+	properties: List[WidgetProperty] = [
+		{
+			'name': 'minimum',
 			'type': float,
 			'tk_name': 'from_',
 			'custom_implementation': False
 		},
-		'maximum': {
+		{
+			'name': 'maximum',
 			'type': float,
 			'tk_name': 'to',
 			'custom_implementation': False
 		},
-		'delta': {
+		{
+			'name': 'delta',
 			'type': float,
 			'tk_name': 'increment',
 			'custom_implementation': False
 		},
-		'txt_fmt': {
+		{
+			'name': 'txt_fmt',
 			'type': str,
 			'tk_name': 'format',
 			'custom_implementation': False,
 			'default': '%.2f'
 		},
-		'value': {
+		{
+			'name': 'value',
 			'type': float,
 			'tk_name': 'textvariable',
 			'custom_implementation': False
 		}
-	}
+	]
 	supported_styles = SupportedStyles(True, True, True, True, True, True, True, True, True, True)
 
 	def __init__(self, minimum: float, maximum: float, delta: float, txt_fmt: str = None, **kwargs):
@@ -472,7 +459,7 @@ class SpinBox(HasFloatValue, Widget):
 		self._ppt_minimum = minimum
 		self._ppt_maximum = maximum
 		self._ppt_delta = delta
-		self._ppt_txt_fmt = txt_fmt if txt_fmt is not None else self.properties['txt_fmt']['default']
+		self._ppt_txt_fmt = txt_fmt if txt_fmt is not None else gi(self.properties, 'name', 'txt_fmt')['default']
 
 	def create_tk_widget(self, tk_parent: TkWidget):
 		self._tk_widget = tk.Spinbox(tk_parent)
@@ -480,23 +467,26 @@ class SpinBox(HasFloatValue, Widget):
 
 class CheckBox(HasBoolValue, Clickable, HasText, Widget):
 	name = WidgetName.CheckBox
-	properties = {
-		'text': {
+	properties = [
+		{
+			'name': 'text',
 			'type': str,
 			'tk_name': 'text',
 			'custom_implementation': False
 		},
-		'click_listener': {
+		{
+			'name': 'click_listener',
 			'type': Callable,
 			'tk_name': 'command',
 			'custom_implementation': False
 		},
-		'value': {
+		{
+			'name': 'value',
 			'type': bool,
 			'tk_name': 'variable',
 			'custom_implementation': False
 		}
-	}
+	]
 	supported_styles = SupportedStyles(True, True, True, True, False, True, False, False, True, False)
 
 	def create_tk_widget(self, tk_parent: TkWidget):
@@ -505,39 +495,51 @@ class CheckBox(HasBoolValue, Clickable, HasText, Widget):
 
 class Slider(HasFloatValue, Widget):
 	name = WidgetName.Slider
-	properties = {
-		'orientation': {
+	properties = [
+		{
+			'name': 'orientation',
+
 			'type': Orientation,
 			'tk_name': None,
 			'custom_implementation': True
 		},
-		'value': {
+		{
+			'name': 'value',
+
 			'type': float,
 			'tk_name': 'variable',
 			'custom_implementation': False
 		},
 
-		'minimum': {
+		{
+			'name': 'minimum',
+
 			'type': float,
 			'tk_name': 'from_',
 			'custom_implementation': False
 		},
-		'maximum': {
+		{
+			'name': 'maximum',
+
 			'type': float,
 			'tk_name': 'to',
 			'custom_implementation': False
 		},
-		'delta': {
+		{
+			'name': 'delta',
+
 			'type': float,
 			'tk_name': 'resolution',
 			'custom_implementation': False
 		},
-		'show_val': {
+		{
+			'name': 'show_val',
+
 			'type': bool,
 			'tk_name': 'showval',
 			'custom_implementation': False
 		}
-	}
+	]
 	supported_styles = SupportedStyles(True, True, True, True, True, False, False, False, True, True)
 
 	def __init__(
@@ -567,23 +569,26 @@ class Slider(HasFloatValue, Widget):
 class RadioButton(HasText, Widget):
 	name = WidgetName.RadioButton
 	supported_styles = SupportedStyles(True, True, True, True, True, True, False, False, True, True)
-	properties = {
-		'text': {
+	properties = [
+		{
+			'name': 'text',
 			'type': str,
 			'tk_name': 'text',
 			'custom_implementation': False
 		},
-		'value': {
+		{
+			'name': 'value',
 			'type': str,
 			'tk_name': 'value',
 			'custom_implementation': False
 		},
-		'variable': {
+		{
+			'name': 'variable',
 			'type': tk.StringVar,
 			'tk_name': 'variable',
 			'custom_implementation': False
 		}
-	}
+	]
 
 	def __init__(self, value: str, variable: tk.StringVar, **kwargs):
 		super().__init__(**kwargs)
@@ -599,18 +604,20 @@ class ListBox(Widget):
 	# TODO: add scrollbar
 
 	name = WidgetName.ListBox
-	properties = {
-		'selection_mode': {
+	properties = [
+		{
+			'name': 'selection_mode',
 			'type': SelectionMode,
 			'tk_name': None,
 			'custom_implementation': True
 		},
-		'active_item_style': {
+		{
+			'name': 'active_item_style',
 			'type': ActiveStyle,
 			'tk_name': None,
 			'custom_implementation': True
 		}
-	}
+	]
 	supported_styles = SupportedStyles(True, True, True, True, True, True, True, True, True, True)
 
 	# ---
@@ -626,6 +633,7 @@ class ListBox(Widget):
 		self._tk_widget = tk.Listbox(tk_parent)
 
 	def post_create(self):
+		print('F')
 		self.add_items_to_list_box()
 
 	# ---
@@ -737,71 +745,3 @@ class ListBox(Widget):
 	def append_items(self, items: List[str]):
 		self.add_items(items, self.count - 1)
 
-
-class Canvas(Widget):
-	name = WidgetName.Canvas
-	properties = {}
-	supported_styles = SupportedStyles(True, False, False, True, True, True, True, True, True, True)
-
-	# ---
-	def create_tk_widget(self, tk_parent: TkWidget):
-		self._tk_widget = tk.Canvas(tk_parent)
-
-	# ---
-	def create_line(
-			self,
-			pt1: Point,
-			pt2: Point,
-			fill_color: Color = 'white',
-			outline_width: int = 1,
-
-			arrows: Arrows = Arrows.No,
-			cap_style: CapStyle = CapStyle.Round
-	):
-		assert self._rendered
-
-		self._tk_widget.create_line(
-			pt1.x, pt1.y,
-			pt2.x, pt2.y,
-			fill=self.theme.color_(fill_color),
-			width=outline_width,
-			arrow=arrows.value,
-			capstyle=cap_style.value,
-			smooth=True
-		)
-
-	def create_rect(
-			self,
-			pt1: Point,
-			pt2: Point,
-			outline_color: Color = 'black',
-			fill_color: Color = 'white',
-			outline_width: int = 1
-	):
-		assert self._rendered
-
-		self._tk_widget.create_rectangle(
-			pt1.x, pt1.y,
-			pt2.x, pt2.y,
-			fill=self.theme.color_(fill_color),
-			outline=self.theme.color_(outline_color),
-			width=outline_width
-		)
-
-	def create_ellipse(
-			self,
-			pt1: Point,
-			pt2: Point,
-			outline_color: Color = 'black',
-			fill_color: Color = 'white',
-			outline_width: int = 1
-	):
-		assert self._rendered
-
-		self._tk_widget.create_oval(
-			pt1.x, pt1.y,
-			pt2.x, pt2.y,
-			fill=self.theme.color_(fill_color),
-			outline=self.theme.color_(outline_color),
-			width=outline_width
-		)

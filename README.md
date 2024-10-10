@@ -1,7 +1,7 @@
 # Tkinter UI
 A simple light-weight standalone Tkinter framework.
 
-**NOTE:** It has nothing to do with `tkinter.ttk`, just the `tkinter` module.
+**NOTE:** It just wraps the `tkinter` module and not `tkinter.ttk`.
 
 ## Features
 ### Window
@@ -29,7 +29,7 @@ A simple light-weight standalone Tkinter framework.
 
 ## TODO
 - All Tk widgets
-  - Canvas
+  - ~~Canvas~~
   - ~~List box~~
   - ~~Radio button~~
   - ~~Slider~~

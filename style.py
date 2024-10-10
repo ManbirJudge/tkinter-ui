@@ -1,19 +1,20 @@
 from copy import deepcopy
 from dataclasses import dataclass, fields, field
 from enum import Enum
-from typing import Tuple, Optional, Dict
+from types import UnionType
+from typing import Tuple, Optional, Dict, Any
 import tkinter as tk
 
-from base_types import WidgetName
+from base_types import WidgetName, BaseWidgetName, CompoundWidgetName
 from utils import rgb_to_hex
 
-# TODOS
+# TODO
 # - insert styles
 # - button background
 # - element border width
 # - select - color, mode, image, border width
 
-# style types
+# ---
 Color = str | Tuple[int, int, int] | Tuple[int, int, int, int]
 
 Margin = int | str | Tuple[int | str | None, int | str | None] | None
@@ -21,7 +22,6 @@ Padding = Margin
 Font = str | Tuple['str', int] | Tuple['str', int, 'str'] | None
 
 
-# ---
 class Cursor(Enum):
 	# common
 	Arrow = 'arrow'
@@ -149,7 +149,7 @@ class BorderType(Enum):
 	Solid = tk.SOLID
 
 
-# base style classes
+# ---
 @dataclass
 class Border:
 	width: int
@@ -181,7 +181,7 @@ class Highlight:
 		return Highlight('black', 0)
 
 
-# main style classes
+# ---
 @dataclass
 class SupportedStyles:
 	bg: bool
@@ -197,8 +197,9 @@ class SupportedStyles:
 	read_only_styles: bool
 
 
+# ---
 @dataclass
-class WidgetStyle:
+class BaseWidgetStyle:
 	background: Color | None = None
 	foreground: Color | None = None
 	padding: Margin = None
@@ -219,13 +220,24 @@ class WidgetStyle:
 	foreground_disabled: Color | None = None
 
 	def update(self, **kwargs):
-		field_types = {f.name: f.type for f in fields(self)}
+		valid_fields = {f.name: f.type for f in fields(self)}
 
 		for key, value in kwargs.items():
-			if key in field_types:
-				setattr(self, key, value)
+			if key in valid_fields:
+				valid_type = valid_fields[key]
 
-			# TODO: type checking
+				type_not_valid = False
+
+				if isinstance(valid_type, UnionType) and type(value) not in valid_type.__args__:
+					type_not_valid = True
+				else:
+					if not isinstance(value, valid_type):
+						type_not_valid = True
+
+				if type_not_valid:
+					raise TypeError(f'\'{key}\' must be of type {valid_type}.')
+
+				setattr(self, key, value)
 
 			else:
 				raise AttributeError(f'WidgetStyle has no attribute \'{key}\'')
@@ -233,15 +245,31 @@ class WidgetStyle:
 		return self
 
 
-# theming
+@dataclass
+class WidgetStyle(BaseWidgetStyle):
+	pass
+
+
+@dataclass
+class CompoundWidgetStyle(BaseWidgetStyle):
+	additional_styles: Dict[str, Any] = field(default_factory=lambda: {})
+
+
+# ---
 @dataclass
 class Theme:
 	margin: Dict[str, int]
 	color: Dict[str, Color]
 	widget: Dict[WidgetName, WidgetStyle]
+	compound_widget: Dict[CompoundWidgetName, CompoundWidgetStyle]
 
-	def get(self, name: WidgetName):
-		return deepcopy(self.widget.get(name, WidgetStyle()))
+	def get(self, name: BaseWidgetName) -> BaseWidgetStyle:
+		if isinstance(name, WidgetName):
+			return deepcopy(self.widget.get(name, WidgetStyle()))
+		elif isinstance(name, CompoundWidgetName):
+			return deepcopy(self.compound_widget.get(name, CompoundWidgetStyle()))
+		else:
+			raise TypeError()
 
 	def margin__(self, margin: str | int | None) -> int:
 		if margin is None:
@@ -404,5 +432,6 @@ THEME = Theme(
 			background='.bg',
 			border=Border(width=1, type=BorderType.Solid)
 		)
-	}
+	},
+	{}
 )

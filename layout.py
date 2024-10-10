@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Tuple, Literal, Any
 
-from base_classes import BaseWidget
-from base_types import TkWidget, Anchor, Side, Fill
-from compound_widgets import CompoundWidget
+from base_types import TkWidget, Anchor, Side, Fill, CompoundWidgetName
+from compound_widget import CompoundWidget
+from object import Object
 from style import WidgetStyle, Theme
-from widgets import Widget
+from widget import Widget
 
 
 # layout options classes
@@ -73,10 +73,10 @@ class FlexLayout(Layout):
 	properties_class = FlexLayoutOptions
 
 	def __init__(
-		self,
-		direction: Literal['vertical', 'horizontal'] = 'horizontal',
-		justification: Literal['start', 'center', 'end', 'space-evenly', 'space-between', 'space-around'] = 'center',
-		alignment: Literal['start', 'center', 'end'] = 'center',
+			self,
+			direction: Literal['vertical', 'horizontal'] = 'horizontal',
+			justification: Literal['start', 'center', 'end', 'space-evenly', 'space-between', 'space-around'] = 'center',
+			alignment: Literal['start', 'center', 'end'] = 'center',
 	):
 		self.direction = direction
 		self.justification = justification
@@ -184,6 +184,9 @@ class FlexLayout(Layout):
 
 # containers
 class Container(CompoundWidget):
+	name = CompoundWidgetName.Container
+	properties = []
+
 	@property
 	def style(self) -> WidgetStyle:
 		return WidgetStyle()
@@ -192,7 +195,7 @@ class Container(CompoundWidget):
 	def count(self) -> int:
 		return len(self._children)
 
-	def __init__(self, parent: BaseWidget, layout: Layout):
+	def __init__(self, parent: Object, layout: Layout):
 		super().__init__(parent)
 
 		self._layout = layout
@@ -203,9 +206,13 @@ class Container(CompoundWidget):
 
 		self._children.append((widget, layout_ppts))
 
-	def render(self, tk_parent: TkWidget) -> TkWidget:
-		_frame = tk.Frame(tk_parent, background=self.theme.color_('.bg'))
+	def create_tk_widget(self, tk_parent: TkWidget):
+		self._tk_widget = tk.Frame(tk_parent, background=self.theme.color_('.bg'))
 
-		self._layout.render_children(_frame, self._children, self.theme)
+		self._layout.render_children(self._tk_widget, self._children, self.theme)
 
-		return _frame
+	def config_tk_widget(self, which_ones: List[str] = None):
+		pass
+
+	def style_tk_widget(self):
+		pass

@@ -1,7 +1,6 @@
 import tkinter as tk
 from collections import namedtuple
 from enum import Enum
-from typing import Any, TypedDict, Type, Tuple
 
 # ---
 TkWindow = tk.Tk | tk.Toplevel
@@ -55,9 +54,11 @@ class ActiveStyle(Enum):
 
 
 # ---
-class WidgetName(Enum):
-	# TODO: maybe extend to base widgets too
+class BaseWidgetName(Enum):
+	pass
 
+
+class WidgetName(BaseWidgetName):
 	Label = 'label'
 	Button = 'button'
 	Entry = 'entry'
@@ -70,11 +71,10 @@ class WidgetName(Enum):
 	Canvas = 'canvas'
 
 
-class WidgetProperty(TypedDict):
-	type: Type
-	tk_name: str
-	custom_implementation: bool  # has no use yet
-	default: Any | None
+class CompoundWidgetName(BaseWidgetName):
+	Container = ''
+	RadioButtonGroup = 'radio-btn-group'
+	Scrollable = 'scrollable'
 
 
 # ---
